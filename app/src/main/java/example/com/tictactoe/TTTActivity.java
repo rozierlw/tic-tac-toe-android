@@ -7,6 +7,7 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.UnknownHostException;
 
+import android.inputmethodservice.KeyboardView;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
@@ -25,8 +26,8 @@ public class TTTActivity extends AppCompatActivity {
     private static final String TAG = "TTTActivity";
 
     // server to connect to
-    protected static final int GROUPCAST_PORT = 20000;
-    protected static final String GROUPCAST_SERVER = "10.0.2.2";
+    protected static final int GROUPCAST_PORT = 3905;
+    protected static final String GROUPCAST_SERVER = "45.55.194.113";
 
     // networking
     Socket mSocket = null;
@@ -39,6 +40,10 @@ public class TTTActivity extends AppCompatActivity {
     Button mConnectButton = null;
     EditText mNameEditText = null;
 
+    //Turn count and tic-tac-toe symbols
+    int turnCt = 0;
+    char symbol = 'x';
+    String player = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,7 +67,7 @@ public class TTTActivity extends AppCompatActivity {
         hideLoginControls();
 
         // make the mBoard non-clickable
-        disableBoardClick();
+        //disableBoardClick();
 
         // hide the mBoard
         hideBoard();
@@ -83,31 +88,62 @@ public class TTTActivity extends AppCompatActivity {
             }
         });
 
-
         // assign a common OnClickListener to all mBoard buttons
         View.OnClickListener boardClickListener = new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                int x, y;
+                int x=0, y=0;
                 switch (v.getId()) {
                     case R.id.b00:
                         x = 0;
                         y = 0;
-
-                        // TODO: what do we do if the user clicked field (0,0)?
                         break;
                     case R.id.b01:
                         x = 0;
                         y = 1;
-
-                        // TODO: what do we do if the user clicked field (0,1)?
                         break;
 
-                    // [ ... and so on for the other buttons ]
+                    case R.id.b02:
+                        x = 0;
+                        y = 2;
+                        break;
+                    case R.id.b10:
+                        x = 1;
+                        y = 0;
+                        break;
+                    case R.id.b11:
+                        x = 1;
+                        y = 1;
+                        break;
+                    case R.id.b12:
+                        x = 1;
+                        y = 2;
+                        break;
+
+                    case R.id.b20:
+                        x = 2;
+                        y = 0;
+                        break;
+                    case R.id.b21:
+                        x = 2;
+                        y = 1;
+                        break;
+
+                    case R.id.b22:
+                        x = 2;
+                        y = 2;
+                        break;
 
                     default:
                         break;
                 }
+
+                mBoard[x][y].setText(symbol);
+                if(win()||tie()){
+                    Toast.makeText(getApplicationContext(),"Game over",Toast.LENGTH_SHORT).show();
+                }
+                send("+MSG,"+player+" ,"+x+","+y);
+                disableBoardClick();
             }
         };
 
@@ -261,14 +297,70 @@ public class TTTActivity extends AppCompatActivity {
                 String msg = lines[0];
 
                 // TODO: act on messages received from the server
+
+
+
                 if (msg.startsWith("+OK,NAME")) {
                     hideLoginControls();
                     showBoard();
+                    send("JOIN,@lucas,2");
                     return;
                 }
 
                 if (msg.startsWith("+ERROR,NAME")) {
                     Toast.makeText(getApplicationContext(), msg.substring("+ERROR,NAME,".length()), Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                if(msg.startsWith("+OK,@lucas")){
+                    int tmp =msg.indexOf('(');
+                    int tmp2 = msg.lastIndexOf('/');
+                    String memberCount = msg.substring(tmp+1,tmp2);
+                    int count = Integer.parseInt(memberCount);
+                    if(count%2==0){
+                        send("MSG,@lucas,bob");
+                    }
+                    return;
+                }
+
+                if(msg.equals("+OK,MSG,@lucas")){
+
+                }
+
+                if(msg.startsWith("+MSG")){
+                    enableBoardClick();
+                    int f = msg.indexOf(',');
+                    String comma = msg.substring(f+1);
+                    int f2 = comma.indexOf(',');
+                    player = comma.substring(0,f2);
+                    return;
+                }
+
+                int tmp = msg.indexOf(',');
+                int tmp2 = msg.lastIndexOf(';');
+                String x = msg.substring(tmp,tmp+1);
+                String y = msg.substring(tmp2,tmp2+1);
+                int xNum = Integer.parseInt(x);
+                int yNum = Integer.parseInt(y);
+
+                if(msg.endsWith(x+","+y)) {
+                    if(symbol=='x'){
+                        if(win()) {
+                            Toast.makeText(getApplicationContext(), "Player 1 won the game!"+msg, Toast.LENGTH_SHORT).show();
+                            disableBoardClick();
+                        }else{
+                            enableBoardClick();
+                            mBoard[xNum][yNum].setText('O');
+                        }
+                    }else{
+                        if(win()){
+                            Toast.makeText(getApplicationContext(),"Player 2 won the game!"+msg, Toast.LENGTH_SHORT).show();
+                            disableBoardClick();
+                        }else{
+                            enableBoardClick();
+                            mBoard[xNum][yNum].setText('X');
+                        }
+                    }
                     return;
                 }
 
@@ -418,5 +510,33 @@ public class TTTActivity extends AppCompatActivity {
                 mBoard[x][y].setEnabled(false);
             }
         }
+    }
+
+
+    boolean win(){
+        if(((mBoard[0][0].getText() == mBoard[0][1]) && mBoard[0][1] == mBoard[0][2]) ||
+                ((mBoard[1][0].getText() == mBoard[1][1]) && mBoard[1][1] == mBoard[1][2]) ||
+                ((mBoard[2][0].getText() == mBoard[2][1]) && mBoard[2][1] == mBoard[2][2]) ||
+                ((mBoard[0][0].getText() == mBoard[1][0]) && mBoard[1][0] == mBoard[2][0]) ||
+                ((mBoard[0][1].getText() == mBoard[1][1]) && mBoard[1][1] == mBoard[2][1]) ||
+                ((mBoard[0][2].getText() == mBoard[1][2]) && mBoard[1][2] == mBoard[2][2]) ||
+                ((mBoard[0][0].getText() == mBoard[1][1]) && mBoard[1][1] == mBoard[2][2]) ||
+                ((mBoard[2][0].getText() == mBoard[1][1]) && mBoard[1][1] == mBoard[0][2])){
+            return true;
+        }
+        return false;
+    }
+    boolean tie(){
+        for(int x=0;x<3;x++){
+            for(int y=0;y<3;y++){
+                if(!mBoard[x][y].getText().equals('X') && !mBoard[x][y].getText().equals('Y')){
+                    return false;
+                }
+            }
+        }
+        if (!win()) {
+            return true;
+        }
+        return false;
     }
 }
