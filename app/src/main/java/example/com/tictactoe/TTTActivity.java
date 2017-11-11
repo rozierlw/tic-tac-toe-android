@@ -42,7 +42,7 @@ public class TTTActivity extends AppCompatActivity {
 
     //Turn count and tic-tac-toe symbols
     int turnCt = 0;
-    char symbol = 'x';
+    String symbol = "x";
     String player = "";
 
     @Override
@@ -312,7 +312,7 @@ public class TTTActivity extends AppCompatActivity {
                     return;
                 }
 
-                if(msg.startsWith("+OK,@lucas")){
+                if(msg.startsWith("+OK,JOIN,@lucas")){
                     int tmp =msg.indexOf('(');
                     int tmp2 = msg.lastIndexOf('/');
                     String memberCount = msg.substring(tmp+1,tmp2);
@@ -323,12 +323,13 @@ public class TTTActivity extends AppCompatActivity {
                     return;
                 }
 
-                if(msg.equals("+OK,MSG,@lucas")){
+                //if(msg.equals("+OK,MSG,@lucas")){
 
-                }
+                //}
 
-                if(msg.startsWith("+MSG")){
+                if(msg.endsWith("bob")){
                     enableBoardClick();
+                    send(symbol);
                     int f = msg.indexOf(',');
                     String comma = msg.substring(f+1);
                     int f2 = comma.indexOf(',');
@@ -343,8 +344,8 @@ public class TTTActivity extends AppCompatActivity {
                 int xNum = Integer.parseInt(x);
                 int yNum = Integer.parseInt(y);
 
-                if(msg.endsWith(x+","+y)) {
-                    if(symbol=='x'){
+                if(msg.startsWith("+MSG")) {
+                    if(symbol=="X"){
                         if(win()) {
                             Toast.makeText(getApplicationContext(), "Player 1 won the game!"+msg, Toast.LENGTH_SHORT).show();
                             disableBoardClick();
